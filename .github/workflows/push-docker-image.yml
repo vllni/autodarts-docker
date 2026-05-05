@@ -106,7 +106,7 @@ jobs:
     if: needs.get_target_version.outputs.version != '' && github.event_name != 'pull_request'
     steps:
       - name: Create GitHub tag and release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.get_target_version.outputs.version }}
           name: ${{ needs.get_target_version.outputs.version }}
