@@ -1,0 +1,48 @@
+name: Validate PR - Build Docker image
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  get_latest_version:
+    name: Get latest Autodarts version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.autodarts-latest-release.outputs.version }}
+    steps:
+      - name: Get latest release from autodarts
+        id: autodarts-latest-release
+        run: |
+          latestVersion=$(curl -s https://get.autodarts.io/detection/latest/linux/arm64/RELEASES.json | jq -r '.currentVersion')
+          echo "Latest version from autodarts: $latestVersion"
+          echo "version=$latestVersion" >> $GITHUB_OUTPUT
+        shell: bash
+
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: get_latest_version
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          provenance: false
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ needs.get_latest_version.outputs.version }}
+          push: false
