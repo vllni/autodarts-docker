@@ -51,7 +51,7 @@ jobs:
     if: needs.get_target_version.outputs.version != null && needs.get_target_version.outputs.version != ''
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
