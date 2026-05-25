@@ -1,7 +1,7 @@
 ARG VERSION
 
 ###Build
-FROM --platform=${BUILDPLATFORM} alpine:3.22.4 AS build
+FROM --platform=${BUILDPLATFORM} alpine:3.23.4 AS build
 ARG VERSION \
     BUILDPLATFORM \
     TARGETPLATFORM
@@ -19,7 +19,7 @@ RUN apk update && \
     rm $(basename $ASSETURL)
 
 ###Run
-FROM alpine:3.22.4
+FROM alpine:3.23.4
 
 WORKDIR /usr/local/bin/autodarts
 COPY --from=build /autodarts .
