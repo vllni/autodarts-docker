@@ -11,9 +11,20 @@ name: Publish autodarts docker image
 
 #trigger when a new version tag is set
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
   schedule:
-    - cron:  '0 10 * * *'
-  workflow_dispatch: null
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: Force a rebuild and push even when no new autodarts version is available
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,21 +38,32 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.autodarts-latest-release.outputs.version }}
+      create_release: ${{ steps.autodarts-latest-release.outputs.create_release }}
     steps:
       - name: Get latest release from autodarts
         id: autodarts-latest-release
         run: |
           latestVersion=$(curl -s https://get.autodarts.io/detection/latest/linux/arm64/RELEASES.json | jq -r '.currentVersion')
           echo "Latest version from autodarts: $latestVersion"
-          
+
           #get current version from docker hub michvllni/autodarts-docker
           currentVersion=$(curl -s https://hub.docker.com/v2/repositories/michvllni/autodarts/tags/ | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "Current version from docker hub: v$currentVersion"
           if [ "$latestVersion" != "v$currentVersion" ]; then
             echo "New version available"
             echo "version=$latestVersion" >> $GITHUB_OUTPUT
+            echo "create_release=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
+            echo "Manual force rebuild requested"
+            echo "version=$latestVersion" >> $GITHUB_OUTPUT
+            echo "create_release=false" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "Dockerfile changed, rebuilding latest image"
+            echo "version=$latestVersion" >> $GITHUB_OUTPUT
+            echo "create_release=false" >> $GITHUB_OUTPUT
           else
             echo "No new version available"
+            echo "create_release=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
   push_to_registry:
@@ -68,6 +90,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get Alpine version from Dockerfile
+        id: alpine_version
+        run: |
+          mapfile -t alpineVersions < <(grep -E '^FROM( --platform=\$\{[^}]+\})? alpine:' Dockerfile | sed -E 's/^FROM( --platform=\$\{[^}]+\})? alpine:([^[:space:]]+).*/\2/' | sort -u)
+
+          if [ ${#alpineVersions[@]} -eq 0 ]; then
+            echo "Could not determine Alpine version from Dockerfile"
+            exit 1
+          fi
+
+          echo "version=${alpineVersions[0]}" >> $GITHUB_OUTPUT
+
       - name: Set Docker Image Metadata
         id: set_image_metadata
         uses: docker/metadata-action@v6
@@ -83,6 +117,7 @@ jobs:
             type=semver,pattern={{version}},value=${{ needs.get_target_version.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.get_target_version.outputs.version }}
             type=semver,pattern={{major}},value=${{ needs.get_target_version.outputs.version }}
+            type=semver,pattern={{version}}-${{ steps.alpine_version.outputs.version }},value=${{ needs.get_target_version.outputs.version }}
             type=sha
             latest
 
@@ -103,7 +138,7 @@ jobs:
     needs:
       - get_target_version
       - push_to_registry
-    if: needs.get_target_version.outputs.version != '' && github.event_name != 'pull_request'
+    if: needs.get_target_version.outputs.version != '' && needs.get_target_version.outputs.create_release == 'true' && github.event_name != 'pull_request'
     steps:
       - name: Create GitHub tag and release
         uses: softprops/action-gh-release@v3
