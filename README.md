@@ -61,6 +61,18 @@ You can also find this configuration at [this link](https://raw.githubuserconten
 
 Save it into the directory of your choice, then navigate into that directory and execute `sudo docker-compose up -d`
 
+## Long loading times on board/lobby page
+If you experience long loading durations on the boards/lobby pages, the reason is a timeout. Autodarts assigns a DNS A-Record to your board to make it accessible for the platform. This DNS Record is roughly `<board ip>.<board id>.autodarts.direct -> <board ip>`.
+
+Example: `172-19-0-2.01234567-89ab-cdef-0123-456789abcdef.autodarts.direct -> 172-19-0-2`
+
+As this ip is only accessible from within the docker network, requests to this domain will always fail. To fix this, disable the ports in the container config and add network_mode: host to make the container run on the host network and directly expose its ports there.
+```diff
+-    ports:
+-    - 3180:3180
++    network_mode: host
+```
+
 ## Useful commands
 | Command | Explanation |
 | --------| ----------- |
