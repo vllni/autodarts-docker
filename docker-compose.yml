@@ -4,6 +4,8 @@ services:
     image: michvllni/autodarts:latest
     container_name: autodarts
     restart: unless-stopped
+    # enable the following ling if you experience long loading times on boards/lobbies page. If you do so, disable the ports section in line 9 and 10
+    # network_mode: host
     ports:
     - 3180:3180
     devices:
