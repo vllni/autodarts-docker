@@ -1,7 +1,7 @@
 ARG VERSION
 
 ###Build
-FROM --platform=${BUILDPLATFORM} alpine:latest AS build
+FROM --platform=${BUILDPLATFORM} alpine:3.22.4 AS build
 ARG VERSION \
     BUILDPLATFORM \
     TARGETPLATFORM
