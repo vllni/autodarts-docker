@@ -15,7 +15,7 @@ jobs:
       - name: Get latest release from autodarts
         id: autodarts-latest-release
         run: |
-          latestVersion=$(curl -s https://get.autodarts.io/detection/latest/linux/arm64/RELEASES.json | jq -r '.currentVersion')
+          latestVersion=$(curl -s https://releases.autodarts.com/headless/downloads/latest.stable.json | jq -r '.platforms["linux-arm64"].version')
           echo "Latest version from autodarts: $latestVersion"
           echo "version=$latestVersion" >> $GITHUB_OUTPUT
         shell: bash

@@ -1,13 +1,14 @@
-version: '3.3'
 services:
   autodarts:
     image: michvllni/autodarts:latest
     container_name: autodarts
     restart: unless-stopped
-    # enable the following ling if you experience long loading times on boards/lobbies page. If you do so, disable the ports section in line 9 and 10
-    # network_mode: host
-    ports:
-    - 3180:3180
+    # host networking lets the Autodarts Desktop app and `autodarts remote` discover the board
+    # via mDNS and avoids long loading times on the boards/lobby pages.
+    # If you cannot use it, remove this line and uncomment the ports section instead.
+    network_mode: host
+    # ports:
+    # - 3180:3180
     devices:
     - /dev/video0:/dev/video0
     - /dev/video2:/dev/video2

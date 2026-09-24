@@ -43,13 +43,18 @@ jobs:
       - name: Get latest release from autodarts
         id: autodarts-latest-release
         run: |
-          latestVersion=$(curl -s https://get.autodarts.io/detection/latest/linux/arm64/RELEASES.json | jq -r '.currentVersion')
+          #only build once every platform we publish is on the same version
+          latestVersion=$(curl -s https://releases.autodarts.com/headless/downloads/latest.stable.json | jq -r '[.platforms["linux-amd64"].version, .platforms["linux-arm64"].version] | unique | if length == 1 then .[0] else empty end')
+          if [ -z "$latestVersion" ]; then
+            echo "Could not determine a common latest version for all platforms"
+            exit 1
+          fi
           echo "Latest version from autodarts: $latestVersion"
 
           #get current version from docker hub michvllni/autodarts-docker
-          currentVersion=$(curl -s https://hub.docker.com/v2/repositories/michvllni/autodarts/tags/ | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          echo "Current version from docker hub: v$currentVersion"
-          if [ "$latestVersion" != "v$currentVersion" ]; then
+          currentVersion=$(curl -s "https://hub.docker.com/v2/repositories/michvllni/autodarts/tags/?page_size=100" | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          echo "Current version from docker hub: $currentVersion"
+          if [ "$latestVersion" != "$currentVersion" ]; then
             echo "New version available"
             echo "version=$latestVersion" >> $GITHUB_OUTPUT
             echo "create_release=true" >> $GITHUB_OUTPUT
@@ -90,18 +95,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get Alpine version from Dockerfile
-        id: alpine_version
-        run: |
-          mapfile -t alpineVersions < <(grep -E '^FROM( --platform=\$\{[^}]+\})? alpine:' Dockerfile | sed -E 's/^FROM( --platform=\$\{[^}]+\})? alpine:([^[:space:]]+).*/\2/' | sort -u)
-
-          if [ ${#alpineVersions[@]} -eq 0 ]; then
-            echo "Could not determine Alpine version from Dockerfile"
-            exit 1
-          fi
-
-          echo "version=${alpineVersions[0]}" >> $GITHUB_OUTPUT
-
       - name: Set Docker Image Metadata
         id: set_image_metadata
         uses: docker/metadata-action@v6
@@ -117,7 +110,6 @@ jobs:
             type=semver,pattern={{version}},value=${{ needs.get_target_version.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.get_target_version.outputs.version }}
             type=semver,pattern={{major}},value=${{ needs.get_target_version.outputs.version }}
-            type=semver,pattern={{version}}-${{ steps.alpine_version.outputs.version }},value=${{ needs.get_target_version.outputs.version }}
             type=sha
             latest
 
@@ -143,6 +135,6 @@ jobs:
       - name: Create GitHub tag and release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ needs.get_target_version.outputs.version }}
-          name: ${{ needs.get_target_version.outputs.version }}
+          tag_name: v${{ needs.get_target_version.outputs.version }}
+          name: v${{ needs.get_target_version.outputs.version }}
           generate_release_notes: true
