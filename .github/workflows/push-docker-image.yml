@@ -132,9 +132,37 @@ jobs:
       - push_to_registry
     if: needs.get_target_version.outputs.version != '' && needs.get_target_version.outputs.create_release == 'true' && github.event_name != 'pull_request'
     steps:
+      # releases follow the autodarts version, so several releases can point at the same commit.
+      # GitHub then skips those when guessing the previous tag, so it is passed explicitly.
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.get_target_version.outputs.version }}
+        run: |
+          previousTag=$(gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name' 2>/dev/null || true)
+          echo "Previous release: ${previousTag:-none}"
+
+          args=(-f tag_name="$TAG" -f target_commitish="${{ github.sha }}")
+          if [ -n "$previousTag" ]; then
+            args+=(-f previous_tag_name="$previousTag")
+          fi
+
+          {
+            if [ -n "$previousTag" ]; then
+              echo "Updates Autodarts from ${previousTag} to ${TAG}."
+            else
+              echo "Autodarts ${TAG}."
+            fi
+            echo
+            gh api "repos/${{ github.repository }}/releases/generate-notes" "${args[@]}" --jq '.body'
+          } > release-notes.md
+          cat release-notes.md
+        shell: bash
+
       - name: Create GitHub tag and release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.get_target_version.outputs.version }}
           name: v${{ needs.get_target_version.outputs.version }}
-          generate_release_notes: true
+          target_commitish: ${{ github.sha }}
+          body_path: release-notes.md
