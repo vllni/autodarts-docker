@@ -1,14 +1,16 @@
 ARG VERSION
 
 ###Build
-FROM --platform=${BUILDPLATFORM} alpine:3.24.0 AS build
+# distroless has no shell or package manager, so the build stage uses the debian release it is built from
+FROM --platform=${BUILDPLATFORM} debian:13.7-slim AS build
 ARG VERSION \
     BUILDPLATFORM \
     TARGETPLATFORM
 
 WORKDIR /
-RUN apk update && \
-    apk add wget tar jq && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates wget jq && \
+    rm -rf /var/lib/apt/lists/* && \
     VERSION=${VERSION#v} && \
     case "${TARGETPLATFORM}" in \
         linux/amd64) PLATFORM=linux-amd64 ;; \
