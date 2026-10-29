@@ -1,9 +1,7 @@
 ## Disclaimer
 Since the autodarts github repository was removed, this repository periodically fetches the latest version from the autodarts api to build and push the image to michvllni/autodarts.
 
-For this reason, the releases in this repository ended when the repository got removed.
-
-Check the [docker hub page](https://hub.docker.com/r/michvllni/autodarts) to find the most recent tags.
+Check the [docker hub page](https://hub.docker.com/r/michvllni/autodarts) or the releases section to find the most recent tags.
 
 ## Upgrading from v1
 Starting with `2.0.0`, the image runs the new Autodarts Headless v2 client. If you want to stay on v1 for now, pin the image to `michvllni/autodarts:1`.
