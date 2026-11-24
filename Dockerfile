@@ -2,7 +2,7 @@ ARG VERSION
 
 ###Build
 # distroless has no shell or package manager, so the build stage uses the debian release it is built from
-FROM --platform=${BUILDPLATFORM} debian:13.7-slim AS build
+FROM --platform=${BUILDPLATFORM} debian:13.8-slim AS build
 ARG VERSION \
     BUILDPLATFORM \
     TARGETPLATFORM
