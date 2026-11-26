@@ -33,7 +33,7 @@ RUN apt-get update && \
     test -x /autodarts/autodarts
 
 ###Run
-FROM gcr.io/distroless/cc-debian13:latest@sha256:d74d144baa124dd9defd01d71872bb56c49d4441dba6153ccf790364f97e64b1
+FROM gcr.io/distroless/cc-debian13:latest@sha256:e8343d4a7da8bb210df0c3ea29de38bbadbba6c773bed0cd8bde506fca3a5c44
 
 WORKDIR /usr/local/bin/autodarts
 COPY --from=build /autodarts/ .
